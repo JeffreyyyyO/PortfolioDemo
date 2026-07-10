@@ -229,18 +229,27 @@
             color: var(--text-maroon);
         }
 
-        .project-subtitle {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--accent-maroon);
-            margin-bottom: 0.75rem;
-            opacity: 0.9;
-        }
-
         .summary-card p {
             font-size: 1rem;
             opacity: 0.9;
             margin-bottom: 1rem;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .project-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background-color: var(--light-maroon);
+            color: var(--text-maroon);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            letter-spacing: 0.02em;
         }
 
         .read-more {
@@ -406,17 +415,19 @@
         let projectsLoaded = false;
         const projectDataCache = {}; // Stores full HTML for each project
 
-        // Define the array of markdown files stored in the repository, now with custom names & subtitles
+        // Define the array of markdown files stored in the repository, now with custom summaries & tags
         const projectFiles = [
             {
                 path: 'projects/project-1.md',
                 name: 'Continuous Compliance',
-                subtitle: 'Change Management in AWS'
+                summary: 'An automated governance framework designed to enforce change management policies across a multi-account AWS environment.',
+                tags: ['AWS Config', 'Python', 'Terraform']
             },
             {
                 path: 'projects/project-2.md',
                 name: 'Helios',
-                subtitle: 'Progressive Weather Interface'
+                summary: 'A progressive web application that strips away redundant meteorological data to present users with exactly what they need.',
+                tags: ['PWA', 'JavaScript', 'Weather API']
             }
         ];
 
@@ -490,21 +501,6 @@
                         // Cache the full HTML for the detail view
                         projectDataCache[project.path] = htmlContent;
 
-                        // Create a temporary hidden div to extract summary paragraph data safely
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = htmlContent;
-
-                        // Extract Summary (look for first paragraph) to keep the preview text descriptive
-                        const paragraph = tempDiv.querySelector('p');
-                        let summary = '';
-                        if (paragraph) {
-                            summary = paragraph.innerText;
-                            // Truncate to ~120 characters for the card
-                            if (summary.length > 120) {
-                                summary = summary.substring(0, 120) + '...';
-                            }
-                        }
-
                         // Build the Summary Card utilizing the new config array values
                         const projectCard = document.createElement('div');
                         projectCard.className = 'project-card summary-card';
@@ -512,10 +508,15 @@
                         // Pass the file string to openProject when clicked
                         projectCard.onclick = () => openProject(project.path); 
                         
+                        // Generate HTML for tags
+                        const tagsHtml = project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join('');
+                        
                         projectCard.innerHTML = `
                             <h3>${project.name}</h3>
-                            <div class="project-subtitle">${project.subtitle}</div>
-                            <p>${summary}</p>
+                            <p>${project.summary}</p>
+                            <div class="tags-container">
+                                ${tagsHtml}
+                            </div>
                             <span class="read-more">View Project <i class="fa-solid fa-arrow-right" style="font-size: 0.8rem;"></i></span>
                         `;
                         
