@@ -366,25 +366,37 @@
             
             try {
                 container.innerHTML = ''; // Clear loading text
+                let loadedCount = 0;
                 
                 for (const file of projectFiles) {
-                    const response = await fetch(file);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                    try {
+                        const response = await fetch(file);
+                        
+                        if (!response.ok) {
+                            console.warn(`Skipping ${file}: HTTP error ${response.status}`);
+                            continue; // Skip this file and move to the next one instead of crashing
+                        }
+                        
+                        const markdownText = await response.text();
+                        
+                        // Parse markdown to HTML using Marked.js
+                        const htmlContent = marked.parse(markdownText);
+                        
+                        // Create wrapper card and append to container
+                        const projectCard = document.createElement('div');
+                        projectCard.className = 'project-card';
+                        projectCard.innerHTML = htmlContent;
+                        
+                        container.appendChild(projectCard);
+                        loadedCount++;
+                    } catch (innerError) {
+                        console.warn(`Error processing ${file}:`, innerError);
                     }
-                    
-                    const markdownText = await response.text();
-                    
-                    // Parse markdown to HTML using Marked.js
-                    const htmlContent = marked.parse(markdownText);
-                    
-                    // Create wrapper card and append to container
-                    const projectCard = document.createElement('div');
-                    projectCard.className = 'project-card';
-                    projectCard.innerHTML = htmlContent;
-                    
-                    container.appendChild(projectCard);
+                }
+                
+                // If the loop finishes and zero files were successfully loaded, show the error UI
+                if (loadedCount === 0) {
+                    throw new Error("No project files could be loaded.");
                 }
                 
                 projectsLoaded = true; // Prevent reloading on every tab switch
