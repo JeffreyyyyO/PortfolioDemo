@@ -184,7 +184,7 @@
         }
 
         /* --- About View --- */
-        .about-content h2, .projects-content h2 {
+        .about-content h2, .projects-content h2, .project-detail-content h2 {
             font-size: 2rem;
             font-weight: 800;
             margin-bottom: 1.5rem;
@@ -197,11 +197,11 @@
             font-weight: 400;
         }
 
-        /* --- Projects View --- */
+        /* --- Projects View (List) --- */
         .projects-grid {
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .project-card {
@@ -212,13 +212,66 @@
             transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
         }
 
-        .project-card:hover {
+        /* Specific styles for the summary cards on the list page */
+        .summary-card {
+            cursor: pointer;
+        }
+        
+        .summary-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(104, 0, 0, 0.05);
             border-color: rgba(104, 0, 0, 0.4);
         }
 
-        /* Markdown Styles generated inside project-card */
+        .summary-card h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+            color: var(--text-maroon);
+        }
+
+        .summary-card p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .read-more {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--accent-maroon);
+        }
+
+        .summary-card:hover .read-more {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        /* --- Project Detail View --- */
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-maroon);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color var(--transition-speed) ease;
+        }
+
+        .back-btn:hover {
+            color: var(--accent-maroon);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        /* Markdown Styles generated inside project-card/detail-container */
         .project-card h1, .project-card h2, .project-card h3 {
             margin-bottom: 0.5rem;
             font-weight: 600;
@@ -315,12 +368,25 @@
                 </div>
             </section>
 
-            <!-- Projects View -->
+            <!-- Projects List View -->
             <section id="projects" class="view">
                 <div class="projects-content">
                     <h2>Technical Projects</h2>
                     <div id="projects-container" class="projects-grid">
-                        <!-- Dynamically populated Markdown projects will appear here -->
+                        <!-- Dynamically populated Markdown project links will appear here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Single Project Detail View -->
+            <section id="project-detail" class="view">
+                <div class="project-detail-content">
+                    <button onclick="navigateTo('projects')" class="back-btn">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Projects
+                    </button>
+                    <!-- Using project-card class to maintain consistent Markdown styling -->
+                    <div id="project-detail-container" class="project-card" style="cursor: default; transform: none; box-shadow: none;">
+                        <!-- Full project content will be injected here -->
                     </div>
                 </div>
             </section>
@@ -328,15 +394,31 @@
     </div>
 
     <script>
+        // --- Global State ---
+        let projectsLoaded = false;
+        const projectDataCache = {}; // Stores full HTML for each project
+
+        // Define the array of markdown files stored in the repository
+        const projectFiles = [
+            'projects/project-1.md',
+            'projects/project-2.md'
+        ];
+
         // --- SPA Navigation Logic ---
         function navigateTo(targetId) {
-            // Update Active Nav Link
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-                if(link.getAttribute('data-target') === targetId) {
-                    link.classList.add('active');
-                }
-            });
+            // Update Active Nav Link (Only if not in project detail)
+            if (targetId !== 'project-detail') {
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                    if(link.getAttribute('data-target') === targetId) {
+                        link.classList.add('active');
+                    }
+                });
+            } else {
+                // Ensure Projects nav link stays active when viewing a specific project
+                document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                document.querySelector('.nav-link[data-target="projects"]').classList.add('active');
+            }
 
             // Update Active View
             document.querySelectorAll('.view').forEach(view => {
@@ -344,22 +426,29 @@
             });
             document.getElementById(targetId).classList.add('active');
 
+            // Scroll to top on navigation
+            window.scrollTo(0, 0);
+
             // Load projects only if we are navigating to the projects tab for the first time
             if (targetId === 'projects' && !projectsLoaded) {
                 loadProjects();
             }
         }
 
+        // --- View Specific Project ---
+        function openProject(fileKey) {
+            const detailContainer = document.getElementById('project-detail-container');
+            
+            // Retrieve cached HTML and inject it
+            if (projectDataCache[fileKey]) {
+                detailContainer.innerHTML = projectDataCache[fileKey];
+                navigateTo('project-detail');
+            } else {
+                console.error("Project data not found in cache.");
+            }
+        }
+
         // --- Dynamic Markdown Architecture ---
-        
-        // Define the array of markdown files stored in the repository
-        const projectFiles = [
-            'projects/project-1.md',
-            'projects/project-2.md'
-        ];
-        
-        let projectsLoaded = false;
-        
         async function loadProjects() {
             const container = document.getElementById('projects-container');
             container.innerHTML = '<div class="loading">Loading projects...</div>';
@@ -374,7 +463,7 @@
                         
                         if (!response.ok) {
                             console.warn(`Skipping ${file}: HTTP error ${response.status}`);
-                            continue; // Skip this file and move to the next one instead of crashing
+                            continue; // Skip this file and move to the next one
                         }
                         
                         const markdownText = await response.text();
@@ -382,10 +471,40 @@
                         // Parse markdown to HTML using Marked.js
                         const htmlContent = marked.parse(markdownText);
                         
-                        // Create wrapper card and append to container
+                        // Cache the full HTML for the detail view
+                        projectDataCache[file] = htmlContent;
+
+                        // Create a temporary hidden div to extract summary data safely
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = htmlContent;
+
+                        // Extract Title (look for first heading)
+                        const heading = tempDiv.querySelector('h1, h2, h3');
+                        const title = heading ? heading.innerText : 'Untitled Project';
+
+                        // Extract Summary (look for first paragraph)
+                        const paragraph = tempDiv.querySelector('p');
+                        let summary = '';
+                        if (paragraph) {
+                            summary = paragraph.innerText;
+                            // Truncate to ~120 characters for the card
+                            if (summary.length > 120) {
+                                summary = summary.substring(0, 120) + '...';
+                            }
+                        }
+
+                        // Build the Summary Card
                         const projectCard = document.createElement('div');
-                        projectCard.className = 'project-card';
-                        projectCard.innerHTML = htmlContent;
+                        projectCard.className = 'project-card summary-card';
+                        
+                        // Pass the file string to openProject when clicked
+                        projectCard.onclick = () => openProject(file); 
+                        
+                        projectCard.innerHTML = `
+                            <h3>${title}</h3>
+                            <p>${summary}</p>
+                            <span class="read-more">View Project <i class="fa-solid fa-arrow-right" style="font-size: 0.8rem;"></i></span>
+                        `;
                         
                         container.appendChild(projectCard);
                         loadedCount++;
@@ -394,7 +513,7 @@
                     }
                 }
                 
-                // If the loop finishes and zero files were successfully loaded, show the error UI
+                // If the loop finishes and zero files were successfully loaded
                 if (loadedCount === 0) {
                     throw new Error("No project files could be loaded.");
                 }
